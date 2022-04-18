@@ -2,6 +2,7 @@ use anyhow::{bail, Context, Result};
 use core::ffi::c_void;
 use directories::ProjectDirs;
 use libloading::{Library, Symbol};
+use log::trace;
 use log::{LevelFilter, Log, SetLoggerError};
 use simplelog::*;
 use std::fs::File;
@@ -24,6 +25,31 @@ pub struct Core<'a> {
     pub core_create_func: Symbol<'a, CoreCreate>,
     pub core_destroy_func: Symbol<'a, CoreDestroy>,
     pub core_update_func: Symbol<'a, CoreUpdate>,
+}
+
+/// Finds the data directory relative to the executable.
+/// This is because it's possible to have data next to the exe, but also running
+/// the applications as targeht/path/exe and the location is in the root then
+fn find_data_directory() -> Result<()> {
+    let current_path = std::env::current_dir().with_context(|| "Unable to get current dir!")?;
+    if current_path.join("data").exists() {
+        return Ok(());
+    }
+
+    let mut path = current_path
+        .parent()
+        .with_context(|| format!("Unable to get parent dir"))?;
+
+    loop {
+        trace!("seaching for data in {:?}", path);
+
+        if path.join("data").exists() {
+            std::env::set_current_dir(path)?;
+            return Ok(());
+        }
+
+        path = path.parent().with_context(|| "Unable to get parent dir")?;
+    }
 }
 
 impl<'a> Core<'a> {
@@ -60,8 +86,30 @@ impl<'a> Core<'a> {
         Ok(())
     }
 
+    pub fn init_data_directory() -> Result<()> {
+        let current_exe = std::env::current_exe()?;
+        std::env::set_current_dir(
+            current_exe
+                .parent()
+                .with_context(|| "Unable to get parent directory")?,
+        )?;
+
+        find_data_directory().with_context(|| "Unable to find data directory")?;
+
+        // TODO: We should do better error handling here
+        // This to enforce we load relative to the current exe
+        let current_exe = std::env::current_exe()?;
+        std::env::set_current_dir(
+            current_exe
+                .parent()
+                .with_context(|| "Unable to get parent directory")?,
+        )?;
+
+        Ok(())
+    }
+
     pub fn load_core() -> Result<Library> {
-        let core_filename = "../retrovert-core/target/debug/librv_core.so";
+        let core_filename = "../../../retrovert-core/target/debug/librv_core.so";
         let lib = unsafe { Library::new(core_filename)? };
         Ok(lib)
     }
