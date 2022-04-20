@@ -21,35 +21,14 @@ pub type CoreUpdate = fn(core: *mut c_void);
 #[allow(dead_code)]
 pub type CoreDestroy = fn(core: *mut c_void, prepare_reflesh: bool);
 
+#[allow(dead_code)]
+pub type CoreShowArgs = fn(core: *mut c_void);
+
 pub struct Core<'a> {
     pub core_create_func: Symbol<'a, CoreCreate>,
     pub core_destroy_func: Symbol<'a, CoreDestroy>,
     pub core_update_func: Symbol<'a, CoreUpdate>,
-}
-
-/// Finds the data directory relative to the executable.
-/// This is because it's possible to have data next to the exe, but also running
-/// the applications as targeht/path/exe and the location is in the root then
-fn find_data_directory() -> Result<()> {
-    let current_path = std::env::current_dir().with_context(|| "Unable to get current dir!")?;
-    if current_path.join("data").exists() {
-        return Ok(());
-    }
-
-    let mut path = current_path
-        .parent()
-        .with_context(|| format!("Unable to get parent dir"))?;
-
-    loop {
-        trace!("seaching for data in {:?}", path);
-
-        if path.join("data").exists() {
-            std::env::set_current_dir(path)?;
-            return Ok(());
-        }
-
-        path = path.parent().with_context(|| "Unable to get parent dir")?;
-    }
+    pub core_show_args: Symbol<'a, CoreShowArgs>,
 }
 
 impl<'a> Core<'a> {
@@ -64,7 +43,8 @@ impl<'a> Core<'a> {
                 dirs.config_dir())
         })?;
 
-        std::fs::create_dir_all(dirs.config_dir()).with_context(|| format!("test"))?;
+        std::fs::create_dir_all(dirs.config_dir())
+            .with_context(|| format!("unable to create all needed directories"))?;
 
         let log_file_path = Path::new(dirs.config_dir()).join("retrovert.log");
 
@@ -86,31 +66,14 @@ impl<'a> Core<'a> {
         Ok(())
     }
 
-    pub fn init_data_directory() -> Result<()> {
-        let current_exe = std::env::current_exe()?;
-        std::env::set_current_dir(
-            current_exe
-                .parent()
-                .with_context(|| "Unable to get parent directory")?,
-        )?;
+    pub fn load_core(core_filename: &Option<String>) -> Result<Library> {
+        let filename = if let Some(core_filename) = core_filename {
+            core_filename
+        } else {
+            "../retrovert-core/target/debug/librv_core.so"
+        };
 
-        find_data_directory().with_context(|| "Unable to find data directory")?;
-
-        // TODO: We should do better error handling here
-        // This to enforce we load relative to the current exe
-        let current_exe = std::env::current_exe()?;
-        std::env::set_current_dir(
-            current_exe
-                .parent()
-                .with_context(|| "Unable to get parent directory")?,
-        )?;
-
-        Ok(())
-    }
-
-    pub fn load_core() -> Result<Library> {
-        let core_filename = "../../../retrovert-core/target/debug/librv_core.so";
-        let lib = unsafe { Library::new(core_filename)? };
+        let lib = unsafe { Library::new(filename)? };
         Ok(lib)
     }
 
@@ -130,11 +93,15 @@ impl<'a> Core<'a> {
             let core_update_func: Symbol<CoreUpdate> = lib
                 .get(b"core_update\0")
                 .context("Unable to find \"core_update\" function")?;
+            let core_show_args: Symbol<CoreShowArgs> = lib
+                .get(b"core_show_args\0")
+                .context("Unable to find \"core_show_args\" function")?;
 
             Ok(Core {
                 core_create_func,
                 core_destroy_func,
                 core_update_func,
+                core_show_args,
             })
         }
     }
