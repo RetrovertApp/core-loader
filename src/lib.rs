@@ -22,7 +22,7 @@ pub type CoreUpdate = fn(core: *mut c_void);
 pub type CoreDestroy = fn(core: *mut c_void, prepare_reflesh: bool);
 
 #[allow(dead_code)]
-pub type CoreShowArgs = fn(core: *mut c_void);
+pub type CoreShowArgs = fn();
 
 pub struct Core<'a> {
     pub core_create_func: Symbol<'a, CoreCreate>,
