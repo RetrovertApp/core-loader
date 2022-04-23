@@ -2,7 +2,6 @@ use anyhow::{bail, Context, Result};
 use core::ffi::c_void;
 use directories::ProjectDirs;
 use libloading::{Library, Symbol};
-use log::trace;
 use log::{LevelFilter, Log, SetLoggerError};
 use simplelog::*;
 use std::fs::File;
@@ -55,12 +54,12 @@ impl<'a> Core<'a> {
 
         CombinedLogger::init(vec![
             TermLogger::new(
-                LevelFilter::Warn,
+                LevelFilter::Trace,
                 Config::default(),
                 TerminalMode::Mixed,
                 ColorChoice::Auto,
             ),
-            WriteLogger::new(LevelFilter::Info, Config::default(), log_file),
+            WriteLogger::new(LevelFilter::Trace, Config::default(), log_file),
         ])?;
 
         Ok(())
