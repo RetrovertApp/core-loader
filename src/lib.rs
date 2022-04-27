@@ -43,7 +43,7 @@ impl<'a> Core<'a> {
         })?;
 
         std::fs::create_dir_all(dirs.config_dir())
-            .with_context(|| format!("unable to create all needed directories"))?;
+            .with_context(|| "unable to create all needed directories".to_string())?;
 
         let log_file_path = Path::new(dirs.config_dir()).join("retrovert.log");
 
