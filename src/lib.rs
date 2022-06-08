@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use core::ffi::c_void;
+use std::os::raw::{c_char, c_void};
 use directories::ProjectDirs;
 use libloading::{Library, Symbol};
 use log::{LevelFilter, Log, SetLoggerError};
@@ -23,11 +23,15 @@ pub type CoreDestroy = fn(core: *mut c_void, prepare_reflesh: bool);
 #[allow(dead_code)]
 pub type CoreShowArgs = fn();
 
+#[allow(dead_code)]
+pub type CoreLoadUrl = fn(core: *mut c_void, name: *const c_char);
+
 pub struct Core<'a> {
     pub core_create_func: Symbol<'a, CoreCreate>,
     pub core_destroy_func: Symbol<'a, CoreDestroy>,
     pub core_update_func: Symbol<'a, CoreUpdate>,
     pub core_show_args: Symbol<'a, CoreShowArgs>,
+    pub core_load_url: Symbol<'a, CoreLoadUrl>,
 }
 
 impl<'a> Core<'a> {
@@ -95,12 +99,16 @@ impl<'a> Core<'a> {
             let core_show_args: Symbol<CoreShowArgs> = lib
                 .get(b"core_show_args\0")
                 .context("Unable to find \"core_show_args\" function")?;
+            let core_load_url: Symbol<CoreLoadUrl> = lib
+                .get(b"core_load_url\0")
+                .context("Unable to find \"core_load_url\" function")?;
 
             Ok(Core {
                 core_create_func,
                 core_destroy_func,
                 core_update_func,
                 core_show_args,
+                core_load_url,
             })
         }
     }
