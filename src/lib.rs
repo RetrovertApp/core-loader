@@ -58,7 +58,8 @@ impl<'a> Core<'a> {
 
         CombinedLogger::init(vec![
             TermLogger::new(
-                LevelFilter::Trace,
+                //LevelFilter::Trace,
+                LevelFilter::Info,
                 Config::default(),
                 TerminalMode::Mixed,
                 ColorChoice::Auto,
