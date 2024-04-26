@@ -15,7 +15,7 @@ pub type SetupLogger =
 pub type CoreCreate = fn() -> *mut c_void;
 
 #[allow(dead_code)]
-pub type CoreUpdate = fn(core: *mut c_void);
+pub type CoreUpdate = fn(core: *mut c_void) -> u64;
 
 #[allow(dead_code)]
 pub type CoreDestroy = fn(core: *mut c_void, prepare_reflesh: bool);
@@ -74,7 +74,8 @@ impl<'a> Core<'a> {
         let filename = if let Some(core_filename) = core_filename {
             core_filename
         } else {
-            "../retrovert-core/target/debug/librv_core.so"
+            //"../retrovert-core/target/debug/librv_core.so"
+            "../retrovert-core/target/debug/librv_core.dylib"
         };
 
         let lib = unsafe { Library::new(filename)? };
